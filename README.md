@@ -57,7 +57,7 @@ Client Request
 
 ### Binary
 ```bash
-git clone https://github.com/yourusername/api-gateway
+git clone https://github.com/janmang8225/api-gateway
 cd api-gateway
 go build -o api-gateway ./cmd/gateway
 ./api-gateway --config config.yaml

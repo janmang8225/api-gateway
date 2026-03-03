@@ -27,6 +27,8 @@ api-gateway :8080
   └── /inventory → http://localhost:3004  (JWT protected)
 ```
 
+![Architecture](./architecture.svg)
+
 ---
 
 ## Install
@@ -88,6 +90,22 @@ curl -H "Authorization: Bearer <token>" http://localhost:8080/orders
 ```
 
 That's it. Your services run as they always have — the gateway sits in front.
+
+---
+
+## Why use this over Nginx / Traefik?
+| | api-gateway | Nginx | Traefik |
+|---|---|---|---|
+| Circuit breaker | ✅ built-in | ❌ | ✅ |
+| JWT auth | ✅ built-in | ❌ plugin only | ❌ plugin only |
+| Rate limiting | ✅ built-in | 💰 Nginx Plus only | ❌ plugin only |
+| Config format | Simple YAML | Custom DSL | YAML / TOML |
+| Hot reload | ✅ SIGHUP | ✅ | ✅ |
+| Binary size | ~8MB | ~2MB | ~100MB |
+| Learning curve | Low | High | Medium |
+| Customizable | ✅ open source Go | ❌ C codebase | ✅ |
+
+**Bottom line:** Nginx is powerful but requires plugins or paid tier for rate limiting and auth. Traefik is great for Kubernetes but heavyweight for simple setups. `api-gateway` gives you everything in one binary, one config file, zero plugins.
 
 ---
 
@@ -179,6 +197,22 @@ kill -SIGHUP $(lsof -ti :8080)
 
 ---
 
+## Docker
+If you prefer running the gateway in a container:
+```bash
+docker run -p 8080:8080 \
+  -v $(pwd)/config.yaml:/app/config.yaml \
+  janmang8225/api-gateway
+```
+> **Note:** If your services are running on the host machine, use `host.docker.internal` instead of `localhost` in your `config.yaml` backends on macOS/Windows. On Linux, add `--add-host=host.docker.internal:host-gateway` to the docker run command.
+```yaml
+# config.yaml when running gateway in Docker
+backends:
+  - http://host.docker.internal:3001
+```
+
+---
+
 ## CLI Flags
 ```bash
 ./api-gateway --config config.yaml   # path to config file (default: config.yaml)
@@ -208,6 +242,12 @@ cd api-gateway
 go build -o api-gateway ./cmd/gateway
 ./api-gateway --config config.yaml
 ```
+---
+
+## Example Project
+
+A minimal two-service microservices setup using `api-gateway`:
+→ github.com/janmang8225/example-api-gateway
 
 ---
 

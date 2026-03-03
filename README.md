@@ -4,7 +4,7 @@
 
 A lightweight, production-ready API Gateway written in Go.
 
-Request routing · Rate limiting · JWT authentication · Load balancing · Circuit breaking
+**Request routing · Rate limiting · JWT authentication · Load balancing · Circuit breaking**
 
 </div>
 
@@ -12,122 +12,119 @@ Request routing · Rate limiting · JWT authentication · Load balancing · Circ
 
 ## What is this?
 
-`api-gateway` is a standalone reverse proxy that sits in front of your backend services — regardless of what language or framework they are written in. You configure it with a single YAML file and run one binary.
+`api-gateway` is a standalone binary that sits in front of your backend services. You configure it with a single YAML file and run it. That's it.
 
-Instead of implementing rate limiting, authentication, and load balancing inside every individual service, you handle it once at the gateway level.
+Your services can be written in **any language** — Node.js, Python, Go, Java, whatever. The gateway doesn't care. It just forwards HTTP requests and gives you rate limiting, auth, load balancing, and circuit breaking for free — without touching your service code.
 ```
-Client Request
-      │
-      ▼
-┌─────────────────────┐
-│      api-gateway    │
-│                     │
-│  ✓ JWT auth         │
-│  ✓ Rate limiting    │
-│  ✓ Load balancing   │
-│  ✓ Circuit breaking │
-└─────────────────────┘
-      │           │
-      ▼           ▼
-  Service A   Service B
-  (Node.js)   (Python)
-  :3001       :3002
+Client
+  │
+  ▼
+api-gateway :8080
+  │
+  ├── /users     → http://localhost:3001
+  ├── /products  → http://localhost:3002
+  ├── /orders    → http://localhost:3003  (JWT protected)
+  └── /inventory → http://localhost:3004  (JWT protected)
 ```
 
 ---
 
-## Features
+## Install
 
-| Feature | Description |
-|---|---|
-| **Reverse Proxy** | Forwards incoming requests to configured backends |
-| **Path Routing** | Route `/users` to one service, `/orders` to another |
-| **Load Balancing** | Round-robin distribution across multiple backend instances |
-| **Rate Limiting** | Token bucket per client IP — returns `429` when exceeded |
-| **Circuit Breaker** | Stops routing to failing backends, retries after cooldown |
-| **JWT Auth** | Per-route Bearer token validation — returns `401` if invalid |
-| **Metrics** | Request count, error count, avg latency at `/metrics` |
-| **Hot Reload** | Reload config with `SIGHUP` — zero downtime, no restart |
-| **Graceful Shutdown** | Finishes in-flight requests before exiting |
-| **Structured Logging** | JSON logs for every request with route, status, latency |
+No Go required. Download the binary for your OS directly from [Releases](https://github.com/janmang8225/api-gateway/releases/latest).
+
+**macOS (Apple Silicon — M1/M2/M3):**
+```bash
+curl -L https://github.com/janmang8225/api-gateway/releases/latest/download/api-gateway-darwin-arm64 -o api-gateway
+chmod +x api-gateway
+```
+
+**macOS (Intel):**
+```bash
+curl -L https://github.com/janmang8225/api-gateway/releases/latest/download/api-gateway-darwin-amd64 -o api-gateway
+chmod +x api-gateway
+```
+
+**Linux:**
+```bash
+curl -L https://github.com/janmang8225/api-gateway/releases/latest/download/api-gateway-linux-amd64 -o api-gateway
+chmod +x api-gateway
+```
+
+**Windows:**
+Download `api-gateway-windows-amd64.exe` from [Releases](https://github.com/janmang8225/api-gateway/releases/latest).
 
 ---
 
 ## Quickstart
 
-### Binary
-```bash
-git clone https://github.com/janmang8225/api-gateway
-cd api-gateway
-go build -o api-gateway ./cmd/gateway
-./api-gateway --config config.yaml
-```
-
-### Docker
-```bash
-docker build -t api-gateway .
-docker run -p 8080:8080 -v $(pwd)/config.yaml:/app/config.yaml api-gateway
-```
-
-### Docker Compose
-```bash
-docker compose up
-```
-
----
-
-## Configuration
-
-All configuration lives in a single `config.yaml` file.
+**1. Write a `config.yaml`:**
 ```yaml
 port: 8080
 jwt_secret: your-secret-key
 
 routes:
   - path: /users
-    auth: true
+    auth: false
     backends:
       - http://localhost:3001
 
   - path: /orders
-    auth: false
+    auth: true
     backends:
       - http://localhost:3002
-      - http://localhost:3003  # multiple backends = automatic load balancing
+      - http://localhost:3003
 ```
 
-### Config Reference
+**2. Run the gateway:**
+```bash
+./api-gateway --config config.yaml
+```
+
+**3. Hit your services through the gateway:**
+```bash
+curl http://localhost:8080/users
+curl -H "Authorization: Bearer <token>" http://localhost:8080/orders
+```
+
+That's it. Your services run as they always have — the gateway sits in front.
+
+---
+
+## Configuration Reference
+```yaml
+port: 8080                  # port the gateway listens on
+jwt_secret: your-secret     # secret key for JWT validation
+
+routes:
+  - path: /users            # incoming path to match
+    auth: false             # true = require JWT, false = open
+    backends:
+      - http://localhost:3001   # one backend = simple proxy
+      - http://localhost:3002   # two or more = round-robin load balancing
+```
 
 | Field | Type | Description |
 |---|---|---|
 | `port` | int | Port the gateway listens on |
-| `jwt_secret` | string | Secret key used to validate JWT tokens |
+| `jwt_secret` | string | Secret used to validate HS256 JWT tokens |
 | `routes[].path` | string | Incoming request path to match |
-| `routes[].auth` | bool | Whether this route requires a valid JWT token |
+| `routes[].auth` | bool | Whether this route requires a valid JWT |
 | `routes[].backends` | list | One or more backend URLs to forward to |
 
 ---
 
-## CLI Flags
-```bash
-./api-gateway --config config.yaml   # path to config file (default: config.yaml)
-./api-gateway --version              # print version and exit
-./api-gateway --help                 # show available flags
-```
-
----
-
-## How Each Feature Works
+## Features
 
 ### Routing
-Incoming requests are matched by path and forwarded to the configured backend. If no route matches, the gateway returns `404`.
+Requests are matched by path and forwarded to the backend. Unmatched routes return `404`.
 ```
-GET /users  →  http://localhost:3001/users
-GET /orders →  http://localhost:3002/orders
+GET /users   → http://localhost:3001/users
+POST /orders → http://localhost:3002/orders
 ```
 
 ### Load Balancing
-If a route has multiple backends, requests are distributed using round-robin. Each request goes to the next backend in order.
+Add multiple backends to a route — traffic is distributed round-robin automatically.
 ```yaml
 backends:
   - http://localhost:3001
@@ -136,28 +133,26 @@ backends:
 ```
 
 ### Rate Limiting
-Each client IP gets a token bucket with a burst of 10 requests. Tokens refill at 5 per second. Requests exceeding the limit receive `429 Too Many Requests`.
+Each client IP gets a token bucket — 10 requests burst, refills at 5 requests/second. Exceeding the limit returns `429 Too Many Requests`.
 
 ### Circuit Breaker
-Each backend has its own circuit breaker with three states:
+Each backend has its own circuit breaker. If a backend starts failing, the gateway stops sending traffic to it and retries after a cooldown.
 ```
-Closed (healthy)  →  3 failures  →  Open (blocked)
-Open (blocked)    →  10s cooldown →  Half-Open (testing)
-Half-Open         →  2 successes →  Closed (recovered)
+Closed → 3 failures → Open (blocked, returns 503)
+Open   → 10s cooldown → Half-Open (one test request)
+Half-Open → 2 successes → Closed (recovered)
 ```
-
-When a backend is open, requests to it immediately return `503 Service Unavailable` instead of waiting for a timeout.
 
 ### JWT Authentication
-Routes with `auth: true` require a valid Bearer token in the `Authorization` header.
+Set `auth: true` on any route to require a Bearer token:
 ```bash
-curl -H "Authorization: Bearer <token>" http://localhost:8080/users
+curl -H "Authorization: Bearer <your-token>" http://localhost:8080/orders
 ```
 
-Invalid or missing tokens return `401 Unauthorized`. Tokens are validated using HS256 with the `jwt_secret` from your config.
+Tokens are validated using HS256 with the `jwt_secret` in your config. Invalid or missing tokens return `401 Unauthorized`.
 
 ### Metrics
-Hit `/metrics` to see live request statistics:
+Live request stats available at `/metrics` — no setup required:
 ```bash
 curl http://localhost:8080/metrics
 ```
@@ -174,43 +169,21 @@ route: /orders
 ```
 
 ### Hot Config Reload
-Update your `config.yaml` and send `SIGHUP` — no restart required:
+Update `config.yaml` and send `SIGHUP` — no restart, no dropped connections:
 ```bash
 kill -SIGHUP $(lsof -ti :8080)
 ```
 
-New routes and backends take effect immediately. In-flight requests are not affected.
+### Graceful Shutdown
+`Ctrl+C` finishes all in-flight requests before exiting.
 
 ---
 
-## Project Structure
-```
-api-gateway/
-├── cmd/
-│   └── gateway/
-│       └── main.go              # entry point, wires everything together
-├── internal/
-│   ├── proxy/
-│   │   └── proxy.go             # reverse proxy + timeout handling
-│   ├── config/
-│   │   └── config.go            # yaml loader + hot reload manager
-│   ├── balancer/
-│   │   └── balancer.go          # round-robin load balancer
-│   ├── breaker/
-│   │   └── breaker.go           # circuit breaker state machine
-│   ├── metrics/
-│   │   └── metrics.go           # request metrics collector
-│   ├── logger/
-│   │   └── logger.go            # structured json logger
-│   └── middleware/
-│       ├── auth/
-│       │   └── auth.go          # jwt authentication middleware
-│       └── ratelimit/
-│           └── ratelimit.go     # token bucket rate limiter
-├── config.yaml                  # example configuration
-├── Dockerfile
-├── docker-compose.yml
-└── go.mod
+## CLI Flags
+```bash
+./api-gateway --config config.yaml   # path to config file (default: config.yaml)
+./api-gateway --version              # print version and exit
+./api-gateway --help                 # show all flags
 ```
 
 ---
@@ -219,17 +192,22 @@ api-gateway/
 
 | Timeout | Default | Description |
 |---|---|---|
-| Upstream | 5s | Max time to wait for a backend response |
+| Upstream | 5s | Max time to wait for backend response |
 | Read | 5s | Max time to read incoming request |
 | Write | 10s | Max time to write response to client |
-| Idle | 60s | Max time to keep idle connections open |
+| Idle | 60s | Max time to keep idle connections alive |
 
 ---
 
-## Requirements
+## Build from Source
 
-- Go 1.21+ (for building from source)
-- Docker (for container deployment)
+Requires Go 1.25+:
+```bash
+git clone https://github.com/janmang8225/api-gateway
+cd api-gateway
+go build -o api-gateway ./cmd/gateway
+./api-gateway --config config.yaml
+```
 
 ---
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"time"
 
@@ -25,10 +26,11 @@ type routeHandler struct {
 	balancer *balancer.RoundRobin
 	breakers map[string]*breaker.CircuitBreaker
 	auth     bool
+	path     string
 }
 
-func buildRoutes(cfg *config.Config) map[string]*routeHandler {
-	routes := make(map[string]*routeHandler)
+func buildRoutes(cfg *config.Config) []*routeHandler {
+	var handlers []*routeHandler
 
 	for _, route := range cfg.Routes {
 		rb := balancer.NewRoundRobin(route.Backends)
@@ -38,14 +40,29 @@ func buildRoutes(cfg *config.Config) map[string]*routeHandler {
 			breakers[backend] = breaker.New(3, 2, 10*time.Second)
 		}
 
-		routes[route.Path] = &routeHandler{
+		handlers = append(handlers, &routeHandler{
 			balancer: rb,
 			breakers: breakers,
 			auth:     route.Auth,
-		}
+			path:     route.Path,
+		})
 	}
 
-	return routes
+	// sort by path length descending so more specific routes match first
+	sort.Slice(handlers, func(i, j int) bool {
+		return len(handlers[i].path) > len(handlers[j].path)
+	})
+
+	return handlers
+}
+
+func findRoute(handlers []*routeHandler, path string) *routeHandler {
+	for _, rh := range handlers {
+		if path == rh.path || len(path) > len(rh.path) && path[len(rh.path)] == '/' {
+			return rh
+		}
+	}
+	return nil
 }
 
 func main() {
@@ -71,11 +88,14 @@ func main() {
 	routes := buildRoutes(cfg)
 
 	mux := http.NewServeMux()
+
+	// metrics endpoint
 	mux.Handle("/metrics", m.Handler())
 
+	// single catch-all — we do our own prefix matching
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		rh, exists := routes[r.URL.Path]
-		if !exists {
+		rh := findRoute(routes, r.URL.Path)
+		if rh == nil {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("404 Not Found"))
 			return

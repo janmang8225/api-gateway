@@ -1,0 +1,123 @@
+<svg width="900" height="620" xmlns="http://www.w3.org/2000/svg" font-family="monospace, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#0f1117" rx="12"/>
+
+  <!-- Title -->
+  <text x="450" y="40" fill="#ffffff" font-size="18" font-weight="bold" text-anchor="middle">api-gateway — Architecture</text>
+
+  <!-- CLIENT -->
+  <rect x="370" y="62" width="160" height="52" rx="8" fill="#1e2130" stroke="#4f6ef7" stroke-width="1.5"/>
+  <text x="450" y="83" fill="#a0aec0" font-size="11" text-anchor="middle">CLIENT</text>
+  <text x="450" y="102" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">HTTP Request</text>
+
+  <!-- Arrow: client to gateway -->
+  <line x1="450" y1="114" x2="450" y2="145" stroke="#4f6ef7" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <polygon points="444,142 450,155 456,142" fill="#4f6ef7"/>
+
+  <!-- GATEWAY BOX -->
+  <rect x="130" y="155" width="640" height="235" rx="10" fill="#151822" stroke="#4f6ef7" stroke-width="1.5"/>
+  <text x="450" y="178" fill="#4f6ef7" font-size="12" font-weight="bold" text-anchor="middle">API GATEWAY  •  :8080</text>
+
+  <!-- Row 1: Rate Limiter → JWT Auth → Router → Load Balancer -->
+  <rect x="158" y="192" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#f6c90e" stroke-width="1"/>
+  <text x="223" y="213" fill="#f6c90e" font-size="10" text-anchor="middle">RATE LIMITER</text>
+  <text x="223" y="230" fill="#a0aec0" font-size="9" text-anchor="middle">token bucket / IP</text>
+
+  <line x1="288" y1="217" x2="303" y2="217" stroke="#555" stroke-width="1.5"/>
+  <polygon points="300,212 310,217 300,222" fill="#555"/>
+
+  <rect x="310" y="192" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#48bb78" stroke-width="1"/>
+  <text x="375" y="213" fill="#48bb78" font-size="10" text-anchor="middle">JWT AUTH</text>
+  <text x="375" y="230" fill="#a0aec0" font-size="9" text-anchor="middle">per-route / HS256</text>
+
+  <line x1="440" y1="217" x2="455" y2="217" stroke="#555" stroke-width="1.5"/>
+  <polygon points="452,212 462,217 452,222" fill="#555"/>
+
+  <rect x="462" y="192" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#ed8936" stroke-width="1"/>
+  <text x="527" y="213" fill="#ed8936" font-size="10" text-anchor="middle">ROUTER</text>
+  <text x="527" y="230" fill="#a0aec0" font-size="9" text-anchor="middle">prefix matching</text>
+
+  <line x1="592" y1="217" x2="607" y2="217" stroke="#555" stroke-width="1.5"/>
+  <polygon points="604,212 614,217 604,222" fill="#555"/>
+
+  <rect x="614" y="192" width="130" height="50" rx="6" fill="#1a1f2e" stroke="#9f7aea" stroke-width="1"/>
+  <text x="679" y="213" fill="#9f7aea" font-size="10" text-anchor="middle">LOAD BALANCER</text>
+  <text x="679" y="230" fill="#a0aec0" font-size="9" text-anchor="middle">round-robin</text>
+
+  <!-- Row 2: Logger | Circuit Breaker | Metrics -->
+  <rect x="158" y="268" width="180" height="50" rx="6" fill="#1a1f2e" stroke="#63b3ed" stroke-width="1"/>
+  <text x="248" y="289" fill="#63b3ed" font-size="10" text-anchor="middle">LOGGER</text>
+  <text x="248" y="306" fill="#a0aec0" font-size="9" text-anchor="middle">JSON · method · status · latency</text>
+
+  <rect x="360" y="268" width="180" height="50" rx="6" fill="#1a1f2e" stroke="#fc8181" stroke-width="1"/>
+  <text x="450" y="289" fill="#fc8181" font-size="10" text-anchor="middle">CIRCUIT BREAKER</text>
+  <text x="450" y="306" fill="#a0aec0" font-size="9" text-anchor="middle">closed → open → half-open</text>
+
+  <rect x="562" y="268" width="180" height="50" rx="6" fill="#1a1f2e" stroke="#63b3ed" stroke-width="1"/>
+  <text x="652" y="289" fill="#63b3ed" font-size="10" text-anchor="middle">METRICS</text>
+  <text x="652" y="306" fill="#a0aec0" font-size="9" text-anchor="middle">requests · errors · avg latency</text>
+
+  <!-- Row 3: Graceful Shutdown + Hot Reload -->
+  <rect x="260" y="340" width="380" height="34" rx="6" fill="#1a1f2e" stroke="#4f6ef7" stroke-width="1"/>
+  <text x="450" y="362" fill="#4f6ef7" font-size="10" text-anchor="middle">GRACEFUL SHUTDOWN  •  HOT CONFIG RELOAD (SIGHUP)</text>
+
+  <!-- Arrow gateway to backends -->
+  <line x1="450" y1="390" x2="450" y2="418" stroke="#4f6ef7" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <polygon points="444,415 450,428 456,415" fill="#4f6ef7"/>
+
+  <!-- Horizontal split line to 4 services -->
+  <line x1="160" y1="428" x2="740" y2="428" stroke="#2d3748" stroke-width="1.5"/>
+  <line x1="160" y1="428" x2="160" y2="450" stroke="#2d3748" stroke-width="1.5"/>
+  <line x1="360" y1="428" x2="360" y2="450" stroke="#2d3748" stroke-width="1.5"/>
+  <line x1="560" y1="428" x2="560" y2="450" stroke="#2d3748" stroke-width="1.5"/>
+  <line x1="740" y1="428" x2="740" y2="450" stroke="#2d3748" stroke-width="1.5"/>
+
+  <!-- Service: /users -->
+  <rect x="70" y="450" width="180" height="90" rx="8" fill="#1e2130" stroke="#48bb78" stroke-width="1.5"/>
+  <text x="160" y="472" fill="#a0aec0" font-size="10" text-anchor="middle">Service A</text>
+  <text x="160" y="491" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">/users</text>
+  <text x="160" y="509" fill="#48bb78" font-size="10" text-anchor="middle">:3001</text>
+  <text x="160" y="527" fill="#718096" font-size="9" text-anchor="middle">Node · Python · Go · Java</text>
+
+  <!-- Service: /products -->
+  <rect x="270" y="450" width="180" height="90" rx="8" fill="#1e2130" stroke="#48bb78" stroke-width="1.5"/>
+  <text x="360" y="472" fill="#a0aec0" font-size="10" text-anchor="middle">Service B</text>
+  <text x="360" y="491" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">/products</text>
+  <text x="360" y="509" fill="#48bb78" font-size="10" text-anchor="middle">:3002</text>
+  <text x="360" y="527" fill="#718096" font-size="9" text-anchor="middle">Node · Python · Go · Java</text>
+
+  <!-- Service: /orders — JWT protected -->
+  <rect x="470" y="450" width="180" height="90" rx="8" fill="#1e2130" stroke="#48bb78" stroke-width="1.5"/>
+  <text x="560" y="472" fill="#a0aec0" font-size="10" text-anchor="middle">Service C  •  🔐 JWT</text>
+  <text x="560" y="491" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">/orders</text>
+  <text x="560" y="509" fill="#48bb78" font-size="10" text-anchor="middle">:3003</text>
+  <text x="560" y="527" fill="#718096" font-size="9" text-anchor="middle">Node · Python · Go · Java</text>
+
+  <!-- Service: /inventory — JWT protected + load balanced -->
+  <rect x="670" y="450" width="180" height="90" rx="8" fill="#1e2130" stroke="#9f7aea" stroke-width="1.5"/>
+  <text x="760" y="472" fill="#a0aec0" font-size="10" text-anchor="middle">Service D  •  🔐 JWT</text>
+  <text x="760" y="491" fill="#ffffff" font-size="12" font-weight="bold" text-anchor="middle">/inventory</text>
+  <text x="760" y="509" fill="#9f7aea" font-size="10" text-anchor="middle">:3004  :3005  (LB)</text>
+  <text x="760" y="527" fill="#718096" font-size="9" text-anchor="middle">Node · Python · Go · Java</text>
+
+  <!-- Legend -->
+  <rect x="100" y="566" width="10" height="10" fill="#f6c90e" rx="2"/>
+  <text x="116" y="576" fill="#a0aec0" font-size="10">Rate Limiting</text>
+
+  <rect x="225" y="566" width="10" height="10" fill="#48bb78" rx="2"/>
+  <text x="241" y="576" fill="#a0aec0" font-size="10">Open Route</text>
+
+  <rect x="335" y="566" width="10" height="10" fill="#fc8181" rx="2"/>
+  <text x="351" y="576" fill="#a0aec0" font-size="10">Circuit Breaker</text>
+
+  <rect x="455" y="566" width="10" height="10" fill="#9f7aea" rx="2"/>
+  <text x="471" y="576" fill="#a0aec0" font-size="10">Load Balanced</text>
+
+  <rect x="575" y="566" width="10" height="10" fill="#63b3ed" rx="2"/>
+  <text x="591" y="576" fill="#a0aec0" font-size="10">Observability</text>
+
+  <rect x="680" y="566" width="10" height="10" fill="#ed8936" rx="2"/>
+  <text x="696" y="576" fill="#a0aec0" font-size="10">Prefix Router</text>
+
+</svg>

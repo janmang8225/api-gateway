@@ -1,21 +1,14 @@
 port: 8080
-jwt_secret: my-secret-key
+jwt_secret: your-secret-key
 
 routes:
   - path: /users
+    auth: false
+    backends:
+      - http://localhost:3001
+
+  - path: /orders
     auth: true
     backends:
-      - http://localhost:3001
       - http://localhost:3002
-  - path: /orders
-    auth: false
-    backends:
-      - http://localhost:3002
-  - path: /slow
-    auth: false
-    backends:
-      - http://localhost:3001
-  - path: /products
-    auth: false
-    backends:
-      - http://localhost:3001
+      - http://localhost:3003

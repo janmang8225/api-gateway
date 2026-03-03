@@ -247,7 +247,7 @@ go build -o api-gateway ./cmd/gateway
 ## Example Project
 
 A minimal two-service microservices setup using `api-gateway`:
-→ http://github.com/janmang8225/example-api-gateway
+→ https://github.com/janmang8225/example-api-gateway
 
 ---
 

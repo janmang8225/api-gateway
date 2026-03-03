@@ -31,7 +31,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.22"
 
       - name: Build
         env:
@@ -45,6 +45,12 @@ jobs:
           go build -o $OUTPUT ./cmd/gateway
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: api-gateway-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OUTPUT=api-gateway-${{ matrix.os }}-${{ matrix.arch }}
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            OUTPUT="${OUTPUT}.exe"
+          fi
+          gh release create ${{ github.ref_name }} --title ${{ github.ref_name }} --notes "" || true
+          gh release upload ${{ github.ref_name }} $OUTPUT --clobber
